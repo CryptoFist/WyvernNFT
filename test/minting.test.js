@@ -1,6 +1,14 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
+const Web3 = require('web3');
+const provider = new Web3.providers.HttpProvider('http://localhost:8545');
+const web3 = new Web3(provider);
+const nftABI = require('../artifacts/contracts/marketPlace.sol/MintingMarketPlace.json');
+const erc20ABI = require('../artifacts/contracts/Wyvern/TestERC20.sol/TestERC20.json');
+
+const {wrap,ZERO_BYTES32,CHAIN_ID,assertIsRejected} = require('./util')
+
 describe('ERC721A', function () {
   before(async function () {
     [
@@ -10,9 +18,8 @@ describe('ERC721A', function () {
        this.addr3
     ] = await ethers.getSigners();
 
-    this.ERC721A = await ethers.getContractFactory('ERC721AMock');
-    this.ERC721Receiver = await ethers.getContractFactory('ERC721ReceiverMock');
-    this.erc721a = await this.ERC721A.deploy('Azuki', 'AZUKI');
+    this.erc721a = await ethers.getContractFactory('MintingMarketPlace');
+    this.erc721a = await this.erc721a.deploy('Azuki', 'AZUKI');
     await this.erc721a.deployed();
   });
 
@@ -69,8 +76,6 @@ describe('ERC721A', function () {
       })
   })
 
-  
-/*
   context ('Test WyvernToken', async function () {
      before(async function () {
         this.WyvernAtomicizer = await ethers.getContractFactory('WyvernAtomicizer');
@@ -87,7 +92,7 @@ describe('ERC721A', function () {
         this.WyvernRegistry = await this.WyvernRegistry.deploy();
         await this.WyvernRegistry.deployed();
 
-        this.WyvernExchange = await this.WyvernExchange.deploy(50, [this.WyvernRegistry.address], '0x');
+        this.WyvernExchange = await this.WyvernExchange.deploy(CHAIN_ID, [this.WyvernRegistry.address], '0x');
         await this.WyvernExchange.deployed();
 
         await this.WyvernRegistry.grantInitialAuthentication(this.WyvernExchange.address);
@@ -105,25 +110,84 @@ describe('ERC721A', function () {
         await this.TestERC1155.deployed();
      })
 
-     it ('Test erc1155 for erc20.', async function () {
-        const from = this.addr1;
-        const to = this.addr2;
-        const erc20MintAmount = 10;
+     it ('Test erc721 for erc20.', async function () {
+        const seller = this.addr1;
+        const buyer = this.addr2;
+        const sellPrice = 1500;
+        const buyPrice = 1500;
         const buyTokenId = 1;
 
-        await this.WyvernRegistry.connect(from).registerProxy();
-        const proxy1 = await this.WyvernRegistry.proxies(from.address);
-        console.log(`proxy1 is ${proxy1.address}`);
-        
-        await this.WyvernRegistry.connect(to).registerProxy();
-        const proxy2 = await this.WyvernRegistry.proxies(to.address);
-        console.log(`proxy2 is ${proxy2.address}`);
+        await this.WyvernRegistry.connect(seller).registerProxy();
+        const proxy1 = await this.WyvernRegistry.proxies(seller.address);
+        console.log("proxy1 is ", proxy1);
 
-        await this.erc721a.connect(from).setApprovalForAll(proxy1.address, true);
-        await this.TestERC20.connect(to).approve(proxy2,erc20MintAmount);
+        await this.WyvernRegistry.connect(buyer).registerProxy();
+        const proxy2 = await this.WyvernRegistry.proxies(buyer.address);
+        console.log("proxy2 is ", proxy2);
 
+        await this.erc721a.connect(seller).approve(proxy1, buyTokenId);
+        await this.TestERC20.connect(buyer).approve(proxy2, buyPrice);
         
+        const selectorOne = web3.eth.abi.encodeFunctionSignature('ERC721ForERC20(bytes,address[7],uint8[2],uint256[6],bytes,bytes)')
+		  const selectorTwo = web3.eth.abi.encodeFunctionSignature('ERC20ForERC721(bytes,address[7],uint8[2],uint256[6],bytes,bytes)')
+
+        const paramsOne = web3.eth.abi.encodeParameters(
+			['address[2]', 'uint256[2]'],
+			[[this.erc721a.address, this.TestERC20.address], [buyTokenId, sellPrice]]
+			) 
+	
+		  const paramsTwo = web3.eth.abi.encodeParameters(
+			['address[2]', 'uint256[2]'],
+			[[this.TestERC20.address, this.erc721a.address], [buyTokenId , buyPrice]]
+			)
+
+         const one = {
+            registry: this.WyvernRegistry.address, 
+            maker: buyer.address, 
+            staticTarget: this.StaticMarket.address, 
+            staticSelector: selectorOne, 
+            staticExtradata: paramsOne, 
+            maximumFill: 1, 
+            listingTime: '0', 
+            expirationTime: '10000000000', 
+            salt: '11'
+         }
+
+         const two = {
+            registry: this.WyvernRegistry.address, 
+            maker: seller.address, 
+            staticTarget: this.StaticMarket.address, 
+            staticSelector: selectorTwo, 
+            staticExtradata: paramsTwo, 
+            maximumFill: 1, 
+            listingTime: '0', 
+            expirationTime: '10000000000', 
+            salt: '12'
+         }
+
+         const web3ERC721a = new web3.eth.Contract(nftABI.abi, this.erc721a.address);
+		   const web3TestERC20 = new web3.eth.Contract(erc20ABI.abi, this.TestERC20.address);
+
+         const firstData = web3ERC721a.methods.transferFrom(seller.address, buyer.address, buyTokenId).encodeABI();
+         const secondData = web3TestERC20.methods.transferFrom(buyer.address, seller.address, buyPrice).encodeABI();
+
+         const firstCall = {
+            target: this.erc721a.address, 
+            howToCall: 0, 
+            data: firstData
+         }
+		   const secondCall = {
+            target: this.TestERC20.address, 
+            howToCall: 0, 
+            data: secondData
+         }
+
+         const exchange = wrap(this.WyvernExchange);
+         let sigOne = await exchange.sign(one, seller.address);
+		   // let sigTwo = await exchange.sign(two, to.address)
+
+         // await exchange.atomicMatchWith(one, sigOne, firstCall, two, sigTwo, secondCall, ZERO_BYTES32,{from: from.address})
      })
-  })*/
+  })
 });
 
