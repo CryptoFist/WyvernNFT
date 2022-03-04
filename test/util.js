@@ -135,6 +135,18 @@ const wrap = (inst) => {
       misc
     )
   }
+  obj.getSignData = async (order) => {
+    const str = structToSign(order, inst.address)
+    return {
+      types: {
+        EIP712Domain: eip712Domain.fields,
+        Order: eip712Order.fields
+      },
+      domain: str.domain,
+      primaryType: 'Order',
+      message: order
+    };
+  }
   obj.sign = async (order, account) => {
     const str = structToSign(order, inst.address)
 
