@@ -19,6 +19,11 @@ contract MintingMarketPlace is ERC721A, ReentrancyGuard {
       bool forSale;
    }
 
+   struct NFTInfo {
+      uint256 tokenId;
+      bool forSale;
+   }
+
    modifier checkOwner(address sender_, uint256 tokenId_) {
       require(sender_ == ownerOf(tokenId_), "Azuki: caller is not token owner");
       _;
@@ -33,13 +38,13 @@ contract MintingMarketPlace is ERC721A, ReentrancyGuard {
    /**
    @dev get NFT tokens owned by user
    */
-   function getNFTByOwner() public view returns (uint256[] memory) {
+   function getNFTByOwner() public view returns (NFTInfo[] memory) {
       address owner = msg.sender;
       uint256 ownerBalance = balanceOf(owner);
-      uint256[] memory tokenIDs = new uint256[](ownerBalance);
+      NFTInfo[] memory ownedNFTs = new NFTInfo[](ownerBalance);
 
       if (ownerBalance == 0) {
-         return tokenIDs;
+         return ownedNFTs;
       }
 
       uint256 tokenId;
@@ -47,10 +52,11 @@ contract MintingMarketPlace is ERC721A, ReentrancyGuard {
 
       for (tokenId = 0; tokenId < _currentIndex; tokenId ++) {
          if (ownerOf(tokenId) == owner) {
-            tokenIDs[index ++] = tokenId;
+            ownedNFTs[index].forSale = offers[tokenId].forSale;
+            ownedNFTs[index ++].tokenId = tokenId;
          }
       }
-      return tokenIDs;
+      return ownedNFTs;
    }
 
    /**

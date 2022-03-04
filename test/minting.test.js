@@ -58,18 +58,18 @@ describe('ERC721A', function () {
 
       it ('Offer and Close one NFT for sale.', async function () {
          const tokenIds = await this.erc721a.connect(this.addr3).getNFTByOwner();
-         await this.erc721a.connect(this.addr3).placeOffering(tokenIds[0], 1000, '');
+         await this.erc721a.connect(this.addr3).placeOffering(tokenIds[0].tokenId, 1000, '');
          let offeredTokenIds = await this.erc721a.connect(this.addr3).getOfferedNFT();
          expect(offeredTokenIds.length).to.equal(1);
 
-         await this.erc721a.connect(this.addr3).closeOffering(tokenIds[0]);
+         await this.erc721a.connect(this.addr3).closeOffering(tokenIds[0].tokenId);
          offeredTokenIds = await this.erc721a.connect(this.addr3).getOfferedNFT();
          expect(offeredTokenIds.length).to.equal(0);
       })
 
       it ('Offer and buy NFT.', async function () {
          let tokenIds = await this.erc721a.connect(this.addr3).getNFTByOwner();
-         const sellTokenId = tokenIds[0];
+         const sellTokenId = tokenIds[0].tokenId;
          await this.erc721a.connect(this.addr3).placeOffering(sellTokenId, 1000, '');
          let offeredTokenIds = await this.erc721a.connect(this.addr3).getOfferedNFT();
          expect(offeredTokenIds.length).to.equal(1);
@@ -86,8 +86,8 @@ describe('ERC721A', function () {
 
       it ('Offer two NFT tokens and buy only one NFT token.', async function () {
          let tokenIds = await this.erc721a.connect(this.addr3).getNFTByOwner();
-         const sellTokenId_1 = tokenIds[0];
-         const sellTokenId_2 = tokenIds[1];
+         const sellTokenId_1 = tokenIds[0].tokenId;
+         const sellTokenId_2 = tokenIds[1].tokenId;
          await this.erc721a.connect(this.addr3).placeOffering(sellTokenId_1, 1000, '');
          await this.erc721a.connect(this.addr3).placeOffering(sellTokenId_2, 1000, '');
          let offeredTokenIds = await this.erc721a.connect(this.addr3).getOfferedNFT();
