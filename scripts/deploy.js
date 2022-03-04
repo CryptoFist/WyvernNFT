@@ -5,8 +5,8 @@ async function main() {
   const [deployer] = await ethers.getSigners();
 
   const deployERC20 = false;
-  const deployERC721 = true;
-  const deployWyvern = false;
+  const deployERC721 = false;
+  const deployWyvern = true;
   const chainID_ropsten = 3;
   const chainID_rinkeby = 4;
   const chainID_mumbai = 80001;
